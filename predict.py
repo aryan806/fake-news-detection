@@ -1,7 +1,7 @@
 import streamlit as st
 from transformers import pipeline
 
-MODEL_NAME = "jy46604790/Fake-News-Bert-Detect"
+MODEL_NAME = "himel05/fake-news-roberta"
 
 
 @st.cache_resource
@@ -30,23 +30,30 @@ def predict_article(article_text):
 
     text = article_text.strip()
 
-    result = classifier(text)[0]
+    results = classifier(text, top_k=2)
 
-    label = result["label"]
-    score = float(result["score"])
+    # Convert the model output into a simple label -> score dictionary
+    scores = {
+        result["label"]: float(result["score"])
+        for result in results
+    }
 
-    if label == "LABEL_1":
-        final_label = "REAL NEWS"
-        p_real = score
-        p_fake = 1.0 - score
-    else:
+    # This model uses:
+    # LABEL_0 = REAL
+    # LABEL_1 = FAKE
+    p_real = scores.get("LABEL_0", 0.0)
+    p_fake = scores.get("LABEL_1", 0.0)
+
+    if p_fake >= p_real:
         final_label = "FAKE NEWS"
-        p_fake = score
-        p_real = 1.0 - score
+        confidence = p_fake
+    else:
+        final_label = "REAL NEWS"
+        confidence = p_real
 
     return {
         "label": final_label,
-        "headline": f"{final_label} ({score:.0%} confidence)",
+        "headline": f"{final_label} ({confidence:.0%} confidence)",
         "p_real": p_real,
         "p_fake": p_fake,
         "word_count": len(text.split()),
