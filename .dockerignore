@@ -1,0 +1,13 @@
+.venv
+venv
+__pycache__
+.git
+.gitignore
+*.ipynb
+Fake.csv
+True.csv
+.pytest_cache
+.idea
+.vscode
+DEPLOY.md
+agent-transcripts

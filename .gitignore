@@ -1,0 +1,21 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.Python
+.DS_Store
+.idea/
+.vscode/
+.ipynb_checkpoints/
+.env
+Thumbs.db
+
+# Streamlit secrets only (keep .streamlit/config.toml for deploy)
+.streamlit/secrets.toml
+
+# Large local datasets (remove these lines if you use Git LFS and want them tracked)
+Fake.csv
+True.csv
+
+# Notebook checkpoints / heavy artifacts
+*.ipynb_checkpoints/
