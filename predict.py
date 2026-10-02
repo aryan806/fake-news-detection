@@ -1,66 +1,53 @@
+import streamlit as st
+from transformers import pipeline
 
-import os
-import urllib.request
-import joblib
-import re
-import nltk
-from nltk.corpus import stopwords
+MODEL_NAME = "jy46604790/Fake-News-Bert-Detect"
 
-MODEL_PATH = "fake_news_model.pkl"
-MODEL_URL = "https://github.com/aryan806/fake-news-detection/releases/download/v1.0/fake_news_model.pkl"
 
-# Download the model if it is not already available
-if not os.path.exists(MODEL_PATH):
-    print("Downloading the trained model...")
-    urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+@st.cache_resource
+def load_model():
+    return pipeline(
+        "text-classification",
+        model=MODEL_NAME,
+        tokenizer=MODEL_NAME,
+        truncation=True,
+        max_length=512
+    )
 
-nltk.download("stopwords", quiet=True)
-stop_words = set(stopwords.words("english"))
 
-model = joblib.load(MODEL_PATH)
-vectorizer = joblib.load("tfidf_vectorizer.pkl")
+classifier = load_model()
 
 
 def predict_article(article_text):
-    """Labels: 0 = real, 1 = fake."""
-    text = (article_text or "").lower()
-    text = re.sub(r"[^a-z\s]", "", text)
-    text = " ".join(
-        word for word in text.split()
-        if word not in stop_words
-    )
-
-    if not text.strip():
+    if not article_text or not article_text.strip():
         return {
             "label": "UNKNOWN",
-            "headline": "No usable words after cleaning.",
+            "headline": "Please enter a news article.",
             "p_real": 0.0,
             "p_fake": 0.0,
             "word_count": 0,
         }
 
-    vec = vectorizer.transform([text])
-    pred = int(model.predict(vec)[0])
-    proba = model.predict_proba(vec)[0]
-    idx = {int(c): i for i, c in enumerate(model.classes_)}
+    text = article_text.strip()
 
-    p_real = float(proba[idx[0]])
-    p_fake = float(proba[idx[1]])
+    result = classifier(text)[0]
 
-    label = "FAKE NEWS" if pred == 1 else "REAL NEWS"
-    confidence = p_fake if pred == 1 else p_real
-    word_count = len(text.split())
+    label = result["label"]
+    score = float(result["score"])
+
+    if label == "LABEL_1":
+        final_label = "REAL NEWS"
+        p_real = score
+        p_fake = 1.0 - score
+    else:
+        final_label = "FAKE NEWS"
+        p_fake = score
+        p_real = 1.0 - score
 
     return {
-        "label": label,
-        "headline": f"{label} ({confidence:.0%} confidence)",
+        "label": final_label,
+        "headline": f"{final_label} ({score:.0%} confidence)",
         "p_real": p_real,
         "p_fake": p_fake,
-        "word_count": word_count,
+        "word_count": len(text.split()),
     }
-
-
-if __name__ == "__main__":
-    article = input("Paste a news article here:\n")
-    result = predict_article(article)
-    print(result.get("headline", result))
