@@ -3,190 +3,509 @@ import streamlit as st
 
 from predict import predict_article
 
+
+# ---------------------------------------------------------
+# PAGE CONFIG
+# ---------------------------------------------------------
 st.set_page_config(
-    page_title="Fake News Detector",
+    page_title="TruthLens AI",
     page_icon="📰",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 
-_BASE_CSS = """
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-    <style>
-      html, body, [class*="css"]  {
-        font-family: 'DM Sans', system-ui, sans-serif !important;
-      }
-      .hero-wrap {
-        background: linear-gradient(135deg, rgba(20, 184, 166, 0.18) 0%, rgba(99, 102, 241, 0.15) 50%, rgba(244, 63, 94, 0.12) 100%);
-        border: 1px solid rgba(148, 163, 184, 0.25);
-        border-radius: 20px;
-        padding: 2rem 2.25rem;
-        margin-bottom: 1.5rem;
-      }
-      .hero-wrap h1 {
-        font-family: 'Fraunces', Georgia, serif !important;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        margin: 0 0 0.5rem 0;
-        font-size: clamp(1.75rem, 4vw, 2.35rem);
-        line-height: 1.15;
-      }
-      .hero-sub {
-        color: rgba(226, 232, 240, 0.82);
-        font-size: 1.05rem;
-        line-height: 1.55;
-        max-width: 52rem;
-        margin: 0;
-      }
-      .step-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.25rem; }
-      .step-pill {
-        flex: 1;
-        min-width: 140px;
-        background: rgba(15, 23, 42, 0.55);
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 12px;
-        padding: 0.75rem 1rem;
-      }
-      .step-num {
-        color: #2dd4bf;
-        font-weight: 700;
-        font-size: 0.75rem;
-        letter-spacing: 0.08em;
-      }
-      .step-txt { font-size: 0.9rem; margin-top: 0.25rem; color: #e2e8f0; }
-      .verdict-card {
-        border-radius: 16px;
-        padding: 1.35rem 1.5rem;
-        margin: 0.5rem 0 1rem 0;
-        border: 2px solid var(--vc-border);
-        background: var(--vc-bg);
-      }
-      .verdict-kicker {
-        font-size: 0.8rem;
-        letter-spacing: 0.12em;
-        font-weight: 600;
-        opacity: 0.85;
-        margin-bottom: 0.35rem;
-      }
-      .verdict-title {
-        font-family: 'Fraunces', Georgia, serif !important;
-        font-size: 1.65rem;
-        font-weight: 700;
-        margin: 0 0 0.35rem 0;
-      }
-      .verdict-sub { font-size: 0.95rem; opacity: 0.9; margin: 0; }
-    </style>
-    """
+# ---------------------------------------------------------
+# CUSTOM CSS
+# ---------------------------------------------------------
+BASE_CSS = """
+<style>
 
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 
-st.markdown(_BASE_CSS, unsafe_allow_html=True)
+html, body, [class*="css"] {
+    font-family: 'DM Sans', sans-serif !important;
+}
 
-with st.sidebar:
-    st.markdown("### How to use")
-    st.markdown(
-        "1. **Paste** a full news article (headline + body is best).\n"
-        "2. Click **Analyze article**.\n"
-        "3. Read the **probabilities**—this is a statistical guess, not fact-checking."
-    )
-    st.divider()
-    st.markdown("### Limits")
-    st.markdown(
-        "- Trained on a **specific dataset** (Reuters-style “real” vs. web “fake”).\n"
-        "- **Short or casual text** often looks “fake” to the model.\n"
-        "- Use for **learning / demos**, not legal or editorial decisions."
-    )
-    st.divider()
-    st.caption("Stack: TF‑IDF + Random Forest · Streamlit")
+.stApp {
+    background:
+        radial-gradient(circle at 10% 0%, rgba(99,102,241,0.12), transparent 28%),
+        radial-gradient(circle at 90% 5%, rgba(20,184,166,0.10), transparent 25%),
+        #0b1020;
+}
 
-hero = """
-<div class="hero-wrap">
-  <h1>Fake News Detector</h1>
-  <p class="hero-sub">
-    Paste an article to see how a simple ML model classifies it against patterns it learned
-    from labeled news data—not whether the story is objectively true.
-  </p>
-  <div class="step-row">
-    <div class="step-pill"><div class="step-num">STEP 1</div><div class="step-txt">Paste full article text</div></div>
-    <div class="step-pill"><div class="step-num">STEP 2</div><div class="step-txt">Run the model</div></div>
-    <div class="step-pill"><div class="step-num">STEP 3</div><div class="step-txt">Interpret probabilities</div></div>
-  </div>
-</div>
+/* Remove Streamlit top spacing */
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+    max-width: 1400px;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background: #0f172a;
+    border-right: 1px solid rgba(148,163,184,0.12);
+}
+
+section[data-testid="stSidebar"] h3 {
+    font-family: 'Space Grotesk', sans-serif !important;
+}
+
+/* Main title */
+.brand {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 3.1rem;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    margin-bottom: 0.15rem;
+    background: linear-gradient(90deg, #ffffff, #a5b4fc, #5eead4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.tagline {
+    color: #94a3b8;
+    font-size: 1.05rem;
+    max-width: 760px;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+/* Top badge */
+.ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.42rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(99,102,241,0.12);
+    border: 1px solid rgba(129,140,248,0.28);
+    color: #c7d2fe;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.8rem;
+}
+
+/* Info cards */
+.info-card {
+    background: rgba(15,23,42,0.72);
+    border: 1px solid rgba(148,163,184,0.14);
+    border-radius: 18px;
+    padding: 1.15rem 1.25rem;
+    min-height: 105px;
+}
+
+.info-label {
+    color: #64748b;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    font-weight: 700;
+}
+
+.info-value {
+    color: #f8fafc;
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-top: 0.35rem;
+}
+
+/* Section titles */
+.section-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #f8fafc;
+    margin-bottom: 0.6rem;
+}
+
+/* Input card */
+.input-card {
+    background: rgba(15,23,42,0.65);
+    border: 1px solid rgba(148,163,184,0.15);
+    border-radius: 20px;
+    padding: 1.35rem;
+}
+
+/* Text area */
+textarea {
+    background: rgba(2,6,23,0.65) !important;
+    border: 1px solid rgba(148,163,184,0.20) !important;
+    border-radius: 14px !important;
+}
+
+/* Buttons */
+.stButton > button {
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+}
+
+/* Verdict */
+.verdict {
+    border-radius: 20px;
+    padding: 1.5rem;
+    margin-top: 1.3rem;
+    border: 1px solid var(--border);
+    background: var(--background);
+}
+
+.verdict-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+.verdict-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0.3rem 0;
+    color: #f8fafc;
+}
+
+.verdict-confidence {
+    color: #cbd5e1;
+    font-size: 0.95rem;
+}
+
+/* Small text */
+.muted {
+    color: #94a3b8;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    color: #475569;
+    font-size: 0.78rem;
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(148,163,184,0.08);
+}
+
+</style>
 """
-st.markdown(hero, unsafe_allow_html=True)
 
-left, right = st.columns((1.15, 1), gap="large")
+st.markdown(BASE_CSS, unsafe_allow_html=True)
 
-with left:
-    st.markdown("##### Article")
-    text = st.text_area(
-        "article",
-        label_visibility="collapsed",
-        height=280,
-        placeholder="Paste several paragraphs from one article for more reliable scores…",
-    )
-    analyze = st.button("Analyze article", type="primary", use_container_width=True)
 
-with right:
-    st.markdown("##### Tips for better results")
-    st.info(
-        "Prefer **neutral wire or newspaper** prose and **enough length** (dozens of content words). "
-        "One-liners and tweets are usually misclassified because they do not match training data."
-    )
-    st.markdown("##### What the numbers mean")
+# ---------------------------------------------------------
+# SIDEBAR
+# ---------------------------------------------------------
+with st.sidebar:
+
     st.markdown(
-        "- **P(real)** / **P(fake)** come from the model’s `predict_proba`.\n"
-        "- The bar chart shows the same split visually.\n"
-        "- Low word count after stopword removal triggers a reliability warning."
+        """
+        <div style="
+            font-family:'Space Grotesk';
+            font-size:1.35rem;
+            font-weight:700;
+            margin-bottom:1.2rem;
+        ">
+        📰 TruthLens AI
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-st.divider()
+    st.markdown("### How it works")
 
+    st.markdown(
+        """
+        **01 — Paste**
+
+        Add the headline and body of a news article.
+
+        **02 — Analyze**
+
+        NewsGaurd analyzes the text using its learned language patterns.
+
+        **03 — Review**
+
+        The system returns a predicted classification and confidence.
+        """
+    )
+
+    st.divider()
+
+    st.markdown("### Model")
+
+    st.markdown(
+        """
+        **NewsGaurd**
+
+        BERT-based fake-news classification model.
+
+        **Benchmark accuracy:** 61.95%
+
+        Evaluated on 2,000 WELFake samples.
+        """
+    )
+
+    st.divider()
+
+    st.markdown("### Important")
+
+    st.markdown(
+        """
+        This tool estimates whether text resembles
+        **fake or real news according to the model**.
+
+        It does **not independently verify facts,
+        sources, or events.**
+        """
+    )
+
+
+# ---------------------------------------------------------
+# HERO
+# ---------------------------------------------------------
+st.markdown(
+    '<div class="ai-badge">✦ AI-POWERED NEWS CLASSIFICATION</div>',
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    '<div class="brand">TruthLens AI</div>',
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """
+    <div class="tagline">
+        Analyze the language of a news article and see whether
+        the model classifies it as <b>real</b> or <b>fake</b>.
+        Built for education, experimentation, and understanding
+        how machine-learning classifiers detect patterns in news.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+# ---------------------------------------------------------
+# TOP INFO CARDS
+# ---------------------------------------------------------
+c1, c2, c3, c4 = st.columns(4)
+
+with c1:
+    st.markdown(
+        """
+        <div class="info-card">
+            <div class="info-label">Model</div>
+            <div class="info-value">NewsGaurd</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+with c2:
+    st.markdown(
+        """
+        <div class="info-card">
+            <div class="info-label">Architecture</div>
+            <div class="info-value">BERT</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+with c3:
+    st.markdown(
+        """
+        <div class="info-card">
+            <div class="info-label">Benchmark</div>
+            <div class="info-value">61.95%</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+with c4:
+    st.markdown(
+        """
+        <div class="info-card">
+            <div class="info-label">Purpose</div>
+            <div class="info-value">Education</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------
+# ARTICLE INPUT
+# ---------------------------------------------------------
+st.markdown(
+    '<div class="section-title">Analyze a news article</div>',
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """
+    <div class="muted" style="margin-bottom:0.8rem;">
+        For the best result, paste the complete article including its headline.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+text = st.text_area(
+    "Article text",
+    label_visibility="collapsed",
+    height=300,
+    placeholder=(
+        "Paste the headline and article text here...\n\n"
+        "Example:\n"
+        "Scientists have announced..."
+    ),
+)
+
+analyze = st.button(
+    "🔍  Analyze Article",
+    type="primary",
+    use_container_width=True,
+)
+
+
+# ---------------------------------------------------------
+# RESULT
+# ---------------------------------------------------------
 if analyze:
-    with st.spinner("Scoring text…"):
+
+    with st.spinner("Analyzing article with NewsGaurd..."):
         out = predict_article(text)
 
     if out["label"] == "UNKNOWN":
+
         st.warning(out["headline"])
+
+    elif out["label"] == "ERROR":
+
+        st.error(out["headline"])
+
     else:
+
         if out["label"] == "REAL NEWS":
-            v_border, v_bg = "#10b981", "rgba(16, 185, 129, 0.14)"
+            border = "#34d399"
+            background = "rgba(16,185,129,0.10)"
         else:
-            v_border, v_bg = "#fb7185", "rgba(251, 113, 133, 0.12)"
+            border = "#fb7185"
+            background = "rgba(244,63,94,0.10)"
+
+        confidence = (
+            out["p_real"]
+            if out["label"] == "REAL NEWS"
+            else out["p_fake"]
+        )
 
         st.markdown(
             f"""
-            <div class="verdict-card" style="--vc-border: {v_border}; --vc-bg: {v_bg};">
-              <div class="verdict-kicker">MODEL VERDICT</div>
-              <div class="verdict-title">{out["label"]}</div>
-              <p class="verdict-sub">Confidence on this label: <strong>{(out["p_fake"] if out["label"] == "FAKE NEWS" else out["p_real"]):.1%}</strong></p>
+            <div class="verdict"
+                 style="
+                    --border:{border};
+                    --background:{background};
+                    border-color:{border};
+                    background:{background};
+                 ">
+                <div class="verdict-label">MODEL VERDICT</div>
+
+                <div class="verdict-title">
+                    {out["label"]}
+                </div>
+
+                <div class="verdict-confidence">
+                    Confidence: <b>{confidence:.1%}</b>
+                </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Metrics
         m1, m2, m3 = st.columns(3)
-        m1.metric("P (real)", f"{out['p_real']:.1%}")
-        m2.metric("P (fake)", f"{out['p_fake']:.1%}")
-        m3.metric("Content words", f"{out['word_count']}")
 
-        chart = pd.DataFrame(
-            {"probability": [out["p_real"], out["p_fake"]]},
-            index=["Real", "Fake"],
-        )
-        st.markdown("##### Probability split")
-        st.bar_chart(chart, height=220)
-
-        if out["word_count"] < 40:
-            st.info(
-                f"**{out['word_count']}** content words after cleaning—scores are **unreliable** until you paste a longer article."
+        with m1:
+            st.metric(
+                "Real probability",
+                f"{out['p_real']:.1%}"
             )
 
+        with m2:
+            st.metric(
+                "Fake probability",
+                f"{out['p_fake']:.1%}"
+            )
+
+        with m3:
+            st.metric(
+                "Words analyzed",
+                f"{out['word_count']}"
+            )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Probability chart
+        st.markdown(
+            '<div class="section-title">Prediction breakdown</div>',
+            unsafe_allow_html=True,
+        )
+
+        chart = pd.DataFrame(
+            {
+                "Probability": [
+                    out["p_real"],
+                    out["p_fake"],
+                ]
+            },
+            index=["Real", "Fake"],
+        )
+
+        st.bar_chart(
+            chart,
+            height=250,
+        )
+
+        st.markdown(
+            """
+            <div class="muted">
+                The probabilities represent the model's classification
+                confidence. They should not be interpreted as proof that
+                an article is factually true or false.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        if out["word_count"] < 40:
+
+            st.warning(
+                f"""
+                Only **{out['word_count']} words** were analyzed.
+                Very short text may produce less reliable predictions.
+                """
+            )
+
+
+# ---------------------------------------------------------
+# FOOTER
+# ---------------------------------------------------------
 st.markdown(
-    '<p style="text-align:center;opacity:0.55;font-size:0.85rem;margin-top:2.5rem;">'
-    "Educational demo · Not a substitute for professional fact-checking"
-    "</p>",
+    """
+    <div class="footer">
+        TruthLens AI · Powered by NewsGaurd · Educational project ·
+        Not a substitute for professional fact-checking
+    </div>
+    """,
     unsafe_allow_html=True,
 )
