@@ -36,28 +36,27 @@ ARTICLE:
 {text}
 
 Instructions:
-1. Identify the main factual claims in the article.
+1. Identify the main factual claims.
 2. Search the web for reliable evidence about those claims.
 3. Prefer authoritative sources, official organizations, reputable news organizations,
-   scientific institutions, and primary sources when available.
-4. Compare the article's claims with the evidence you find.
-5. Do NOT decide that an article is false merely because you cannot find evidence.
-6. Do NOT rely on the writing style, wording, or presence of words such as Reuters as proof.
-7. Give one overall assessment using exactly one of:
-   - SUPPORTED
-   - CONTRADICTED
-   - MIXED
-   - INSUFFICIENT EVIDENCE
+   scientific institutions, and primary sources.
+4. Compare the claims with the evidence you find.
+5. Do not decide that an article is false merely because evidence is not found.
+6. Do not use writing style or words such as "Reuters" as proof.
+7. Give exactly one assessment:
+   SUPPORTED
+   CONTRADICTED
+   MIXED
+   INSUFFICIENT EVIDENCE
 8. Explain the assessment briefly.
 9. Mention important uncertainty or conflicting evidence.
-10. Do not claim certainty when the evidence is incomplete.
 
-Return your answer in this format:
+Return:
 
-ASSESSMENT: <one of the four labels>
+ASSESSMENT: <one label>
 
 SUMMARY:
-<2-4 sentence explanation>
+<2-4 sentences>
 
 IMPORTANT CLAIMS:
 - <claim 1>
@@ -65,10 +64,10 @@ IMPORTANT CLAIMS:
 - <claim 3>
 
 EVIDENCE:
-<brief explanation of what reliable sources indicate>
+<brief explanation>
 
 LIMITATIONS:
-<brief explanation of uncertainty or limitations>
+<brief explanation>
 """
 
     try:
@@ -76,13 +75,16 @@ LIMITATIONS:
             model=MODEL_NAME,
             contents=prompt,
             config=types.GenerateContentConfig(
-                tools=[types.Tool(google_search=types.GoogleSearch())]
+                tools=[
+                    types.Tool(
+                        google_search=types.GoogleSearch()
+                    )
+                ]
             ),
         )
 
         analysis = response.text or "No analysis was returned."
 
-        # Extract the assessment from Gemini's response.
         assessment = "INSUFFICIENT EVIDENCE"
 
         for possible_label in [
@@ -95,26 +97,15 @@ LIMITATIONS:
                 assessment = possible_label
                 break
 
-        # Keep these fields for compatibility with the current app.
-        # They are categorical placeholders, NOT probabilities.
         if assessment == "SUPPORTED":
-            p_real = 1.0
-            p_fake = 0.0
             label = "SUPPORTED"
         elif assessment == "CONTRADICTED":
-            p_real = 0.0
-            p_fake = 1.0
             label = "CONTRADICTED"
         elif assessment == "MIXED":
-            p_real = 0.5
-            p_fake = 0.5
             label = "MIXED"
         else:
-            p_real = 0.5
-            p_fake = 0.5
             label = "INSUFFICIENT EVIDENCE"
 
-        # Extract grounded web sources from Gemini's response.
         sources = []
 
         if response.candidates:
@@ -130,32 +121,35 @@ LIMITATIONS:
                             }
                         )
 
-        # Remove duplicate sources.
         unique_sources = []
         seen_urls = set()
 
         for source in sources:
-            if source["url"] not in seen_urls:
-                seen_urls.add(source["url"])
+            url = source["url"]
+
+            if url and url not in seen_urls:
+                seen_urls.add(url)
                 unique_sources.append(source)
 
         return {
             "label": label,
             "headline": f"Assessment: {label}",
-            "p_real": p_real,
-            "p_fake": p_fake,
+            "p_real": 0.0,
+            "p_fake": 0.0,
             "word_count": len(text.split()),
             "analysis": analysis,
             "sources": unique_sources,
         }
 
     except Exception as e:
+        st.error(f"Gemini error: {type(e).__name__}: {e}")
+
         return {
             "label": "ERROR",
-            "headline": "Unable to analyze the article.",
+            "headline": "Gemini analysis failed.",
             "p_real": 0.0,
             "p_fake": 0.0,
             "word_count": len(text.split()),
-            "analysis": f"Error: {str(e)}",
+            "analysis": f"{type(e).__name__}: {e}",
             "sources": [],
         }
