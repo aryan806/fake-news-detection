@@ -14,20 +14,20 @@ from predict import predict_article  # backend: do not change
 # ---------------------------------------------------------------------------
 st.set_page_config(
     page_title="TruthLens AI - Fake News Detection",
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="collapsed",
 )
 
 MODEL_NAME = "NewsGaurd"
 DISCLAIMER = (
-    "This tool provides a machine-learning classification. It does not "
-    "independently verify the factual accuracy of an article."
+    "TruthLens AI provides a machine-learning classification, "
+    "not independent fact verification."
 )
 
 
 def html(markup: str) -> None:
     """Render raw HTML. Lines are joined so Markdown never treats them as code."""
-    flat = "".join(line.strip() for line in markup.strip().splitlines())
+    flat = " ".join(line.strip() for line in markup.strip().splitlines())
     st.markdown(flat, unsafe_allow_html=True)
 
 
@@ -36,138 +36,195 @@ def html(markup: str) -> None:
 # ---------------------------------------------------------------------------
 CSS = """
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
   color-scheme: light;
-  --bg: #f7f6f3;
+  --bg: #f6f5f2;
   --panel: #ffffff;
-  --border: #d9d6cf;
-  --text: #1f2328;
-  --muted: #5f6670;
-  --accent: #1f4e79;
-  --accent-dark: #173d5f;
-  --green: #2e7d4f;
-  --red: #b3382c;
-  --track: #e6e3dc;
+  --border: #dcd9d2;
+  --text: #1b2433;
+  --muted: #5b6678;
+  --accent: #2456a6;
+  --accent-dark: #1b447f;
+  --green: #2d7a4d;
+  --green-tint: #f1f7f3;
+  --red: #b23a30;
+  --red-tint: #fbf3f2;
+  --track: #e8e5de;
+  --shadow: 0 1px 2px rgba(27,36,51,0.06), 0 6px 18px rgba(27,36,51,0.05);
 }
 
 /* Page */
 html, body, .stApp, [data-testid="stAppViewContainer"] {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
 }
 [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"],
 [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"],
 #MainMenu, footer { display: none !important; }
-.block-container { max-width: 880px; padding: 1.5rem 1.25rem 3rem; }
+.block-container {
+  max-width: 1120px !important; margin: 0 auto;
+  padding: 0.6rem 1.5rem 3rem !important;
+}
 html { scroll-behavior: smooth; }
+[data-testid="stVerticalBlock"] { gap: 0.5rem; }
 [data-testid="stMarkdownContainer"] { color: var(--text); }
 [data-testid="stSpinner"], [data-testid="stSpinner"] * { color: var(--muted) !important; }
 
 /* Header */
 .header {
-  display: flex; justify-content: space-between; align-items: baseline;
-  flex-wrap: wrap; gap: 0.5rem 1.5rem;
-  padding-bottom: 0.9rem; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 0.4rem 1.5rem;
+  padding: 0.35rem 0 0.8rem; border-bottom: 1px solid var(--border);
 }
-.brand { font-size: 1.2rem; font-weight: 700; }
-.brand-sub { font-size: 0.9rem; color: var(--muted); margin-top: 0.1rem; }
-.nav { display: flex; gap: 1.2rem; font-size: 0.95rem; }
+.brand { display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; }
+.brand-name { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; }
+.brand-sub { font-size: 0.85rem; color: var(--muted); padding-left: 0.8rem; border-left: 1px solid var(--border); }
+.nav { display: flex; gap: 1.4rem; font-size: 0.92rem; font-weight: 500; }
 .nav a { color: var(--muted) !important; text-decoration: none !important; }
-.nav a:hover { color: var(--accent) !important; text-decoration: underline !important; }
+.nav a:hover { color: var(--accent) !important; }
 
-/* Intro */
-.intro { margin: 1.6rem 0 1.3rem; max-width: 620px; }
-.intro-title { font-size: 1.5rem; font-weight: 600; line-height: 1.3; }
-.intro-text { color: var(--muted); margin-top: 0.4rem; line-height: 1.6; }
+/* Hero: headline on the left, short text on the right */
+.hero {
+  display: grid; grid-template-columns: 1.1fr 1fr; gap: 1rem 3rem;
+  align-items: end; margin: 1rem 0 1rem;
+}
+.eyebrow { font-size: 0.74rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--accent); }
+.hero-title { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin-top: 0.35rem; }
+.hero-sub { font-size: 1.02rem; color: var(--text); margin-top: 0.4rem; line-height: 1.5; }
+.hero-text { color: var(--muted); font-size: 0.95rem; line-height: 1.6; }
+
+/* Information strip (one bar, thin dividers) */
+.strip {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+  background: var(--border); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden; margin-bottom: 0.9rem;
+}
+.strip > div { background: var(--panel); padding: 0.65rem 1rem; }
+.strip .k { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.strip .v { font-weight: 600; margin-top: 0.1rem; font-size: 0.97rem; }
 
 /* Analyzer panel (a bordered Streamlit container holding the textarea) */
-div[data-testid="stVerticalBlockBorderWrapper"]:has(textarea) {
-  background: var(--panel);
+.st-key-analyzer-panel {
+  background: var(--panel) !important;
   border: 1px solid var(--border) !important;
-  border-radius: 8px !important;
-  padding: 0.5rem 0.9rem 0.6rem;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow) !important;
+  padding: 0.6rem 1rem 0.8rem !important;
 }
-.panel-title { font-size: 1.1rem; font-weight: 600; margin-top: 0.4rem; }
-.panel-text { color: var(--muted); font-size: 0.93rem; margin: 0.2rem 0 0.7rem; }
-.stTextArea [data-baseweb="textarea"], .stTextArea [data-baseweb="base-input"] {
-  background: #fff !important; border-radius: 6px !important;
-  border: 1px solid #bdb9b0 !important;
+.panel-title { font-size: 1.15rem; font-weight: 650; margin-top: 0.3rem; }
+.panel-text { color: var(--muted); font-size: 0.92rem; margin: 0.15rem 0 0.5rem; }
+.stTextArea [data-testid="stTextAreaRootElement"] {
+  background: #fff !important; border-radius: 8px !important;
+  border: 1px solid #b9b5ab !important; overflow: hidden;
 }
-.stTextArea [data-baseweb="textarea"]:focus-within { border-color: var(--accent) !important; }
+.stTextArea [data-testid="stTextAreaRootElement"]:focus-within {
+  border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(36,86,166,0.13) !important;
+}
 .stTextArea textarea {
   background: #fff !important; color: var(--text) !important;
-  font-size: 0.97rem !important; line-height: 1.55 !important;
-  font-family: inherit !important;
+  font-size: 0.98rem !important; line-height: 1.6 !important;
+  padding: 0.8rem 1rem !important; font-family: inherit !important;
+  border: 0 !important; border-radius: 0 !important; outline: none !important; box-shadow: none !important;
 }
-.stTextArea textarea::placeholder { color: #8a8f98 !important; }
-.counter { color: var(--muted); font-size: 0.82rem; margin: 0.1rem 0 0.7rem; }
+.stTextArea textarea::placeholder { color: #8b919c !important; }
+.counter { color: var(--muted); font-size: 0.85rem; }
 
 /* Button */
+div.stButton, [data-testid="stButton"] { display: flex; justify-content: flex-end; }
+.st-key-analyzer-panel [data-testid="stColumn"]:last-of-type [data-testid="stVerticalBlock"] { align-items: flex-end; }
 .stButton > button {
+  min-width: 230px; padding: 0.65rem 1.6rem; border-radius: 8px;
   background: var(--accent) !important; color: #fff !important;
-  border: 1px solid var(--accent) !important; border-radius: 6px;
-  padding: 0.5rem 1.4rem; font-weight: 600; font-size: 0.97rem; box-shadow: none;
+  border: 1px solid var(--accent) !important;
+  font-weight: 600; font-size: 1rem; box-shadow: 0 1px 2px rgba(27,36,51,0.15);
 }
 .stButton > button:hover { background: var(--accent-dark) !important; border-color: var(--accent-dark) !important; }
-.stButton > button p { color: #fff !important; }
+.stButton > button p { color: #fff !important; font-weight: 600; font-size: 1rem; }
 
 /* Notices and result */
 .notice {
-  margin-top: 1rem; padding: 0.7rem 0.9rem; border-radius: 6px; font-size: 0.93rem;
+  margin-top: 1rem; padding: 0.7rem 0.95rem; border-radius: 8px; font-size: 0.93rem;
   background: var(--panel); border: 1px solid var(--border);
 }
 .notice.warn { border-color: #c9a227; }
 .notice.err { border-color: var(--red); }
 .result {
-  margin-top: 1.25rem; padding: 1.2rem 1.3rem; border-radius: 8px;
-  background: var(--panel); border: 1px solid var(--border);
+  margin-top: 1.2rem; padding: 1.3rem 1.5rem 1.2rem; border-radius: 12px;
+  background: var(--panel); border: 1px solid var(--border); box-shadow: var(--shadow);
 }
-.result-label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-.verdict { font-size: 1.9rem; font-weight: 700; margin-top: 0.15rem; }
-.verdict.real { color: var(--green); }
-.verdict.fake { color: var(--red); }
-.conf { margin: 0.1rem 0 1.1rem; }
-.bar-row { display: flex; justify-content: space-between; font-size: 0.93rem; margin-top: 0.7rem; }
-.bar-row b { font-weight: 600; }
-.track { height: 8px; border-radius: 3px; background: var(--track); margin-top: 0.3rem; overflow: hidden; }
-.fill { height: 100%; }
+.result.real { background: var(--green-tint); border-top: 3px solid var(--green); }
+.result.fake { background: var(--red-tint); border-top: 3px solid var(--red); }
+.result-label { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+.verdict { font-size: 2.1rem; font-weight: 700; letter-spacing: -0.02em; margin-top: 0.15rem; line-height: 1.15; }
+.result.real .verdict { color: var(--green); }
+.result.fake .verdict { color: var(--red); }
+.conf { color: var(--muted); margin-top: 0.15rem; }
+.probs { margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid rgba(27,36,51,0.12); }
+.prob-row { display: grid; grid-template-columns: 3.4rem 4.2rem 1fr; align-items: center; gap: 0.8rem; padding: 0.3rem 0; }
+.prob-row .name { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em; color: var(--muted); }
+.prob-row .pct { font-weight: 700; font-variant-numeric: tabular-nums; }
+.track { height: 10px; border-radius: 5px; background: var(--track); overflow: hidden; }
+.fill { height: 100%; border-radius: 5px; }
 .fill.real { background: var(--green); }
 .fill.fake { background: var(--red); }
-.meta { margin-top: 1.1rem; color: var(--muted); font-size: 0.9rem; }
-.short-note { margin-top: 0.4rem; color: var(--muted); font-size: 0.85rem; }
+.meta { margin-top: 0.9rem; color: var(--muted); font-size: 0.9rem; }
+.short-note { margin-top: 0.3rem; color: var(--muted); font-size: 0.85rem; }
 
 /* Disclaimer */
 .disclaimer {
-  margin-top: 1.25rem; padding: 0.7rem 0.9rem; border-radius: 6px; font-size: 0.88rem;
-  color: #3d4a57; background: #eaeff3; border: 1px solid #d3dbe3;
+  margin-top: 1.2rem; padding: 0.7rem 1rem; border-radius: 8px; font-size: 0.9rem;
+  color: #2f3f55; background: #edf2f9; border: 1px solid #d3deee;
 }
 
 /* Sections */
-.section { margin-top: 2.6rem; scroll-margin-top: 1rem; }
-.section-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.9rem; }
-.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
-.step { border-top: 2px solid var(--text); padding-top: 0.6rem; }
-.step-num { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-.step-name { font-weight: 600; margin-top: 0.1rem; }
-.step-text { color: var(--muted); font-size: 0.9rem; margin-top: 0.25rem; line-height: 1.5; }
+.section { margin-top: 2.6rem; padding-top: 1.4rem; border-top: 1px solid var(--border); scroll-margin-top: 1rem; }
+.section-title { font-size: 1.3rem; font-weight: 650; letter-spacing: -0.01em; margin-bottom: 1rem; }
 
-.kv { display: grid; grid-template-columns: 11rem 1fr; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); }
+.step { padding: 0 1.5rem; border-left: 1px solid var(--border); }
+.step:first-child { padding-left: 0; border-left: 0; }
+.step-num { color: var(--accent); font-weight: 700; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.step-name { font-weight: 600; margin-top: 0.15rem; }
+.step-text { color: var(--muted); font-size: 0.92rem; margin-top: 0.2rem; line-height: 1.5; }
+
+.about { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem 3rem; align-items: start; }
+.about-text { color: var(--muted); line-height: 1.7; font-size: 0.95rem; }
+.about-text div + div { margin-top: 0.7rem; }
+.about-text b { color: var(--text); font-weight: 600; }
+.kv { display: flex; justify-content: space-between; padding: 0.55rem 0; border-bottom: 1px solid var(--border); font-size: 0.97rem; }
 .kv:first-child { border-top: 1px solid var(--border); }
 .kv .k { color: var(--muted); }
-.model-note { margin-top: 0.8rem; color: var(--muted); font-size: 0.88rem; line-height: 1.6; max-width: 640px; }
+.kv .v { font-weight: 600; font-variant-numeric: tabular-nums; }
+.eval-set { margin-top: 0.9rem; font-size: 0.93rem; }
+.eval-set span { color: var(--muted); }
+.model-note { margin-top: 0.5rem; color: var(--muted); font-size: 0.85rem; line-height: 1.55; }
 
 /* Footer */
-.footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.88rem; color: var(--muted); }
+.footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
 .footer b { color: var(--text); font-weight: 600; }
 
-/* Small screens */
+/* Tablet and mobile */
+@media (max-width: 860px) {
+  .hero { grid-template-columns: 1fr; margin-top: 1.2rem; }
+  .about { grid-template-columns: 1fr; }
+}
 @media (max-width: 640px) {
-  .block-container { padding: 1rem 0.9rem 2.5rem; }
-  .steps { grid-template-columns: 1fr; gap: 1rem; }
-  .kv { grid-template-columns: 8.5rem 1fr; }
-  .verdict { font-size: 1.6rem; }
-  .stButton > button { width: 100%; }
+  .block-container { padding: 0.7rem 0.9rem 2.5rem !important; }
+  .brand-sub { border-left: 0; padding-left: 0; }
+  .strip { grid-template-columns: repeat(2, 1fr); }
+  .steps { grid-template-columns: 1fr; }
+  .step { padding: 0.9rem 0; border-left: 0; border-top: 1px solid var(--border); }
+  .step:first-child { border-top: 0; padding-top: 0; }
+  .hero-title { font-size: 1.7rem; }
+  .verdict { font-size: 1.8rem; }
+  .result { padding: 1.1rem; }
+  div.stButton, [data-testid="stButton"] { justify-content: stretch; }
+  .st-key-analyzer-panel [data-testid="stColumn"]:last-of-type [data-testid="stVerticalBlock"] { align-items: stretch; }
+  .st-key-analyzer-panel [data-testid="stElementContainer"]:has([data-testid="stButton"]) { width: 100% !important; }
+  .stButton > button { width: 100%; min-width: 0; }
 }
 </style>
 """
@@ -178,14 +235,14 @@ def inject_css() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 2. Header and intro
+# 2. Header, hero and information strip
 # ---------------------------------------------------------------------------
 def render_header() -> None:
     html("""
     <div class="header">
-      <div>
-        <div class="brand">TruthLens AI</div>
-        <div class="brand-sub">Fake News Detection</div>
+      <div class="brand">
+        <span class="brand-name">TruthLens AI</span>
+        <span class="brand-sub">Fake News Detection</span>
       </div>
       <div class="nav">
         <a href="#analyzer">Analyzer</a>
@@ -196,11 +253,27 @@ def render_header() -> None:
     """)
 
 
-def render_intro() -> None:
-    html("""
-    <div class="intro">
-      <div class="intro-title">Analyze a news article using a pretrained text-classification model.</div>
-      <div class="intro-text">Paste an article below to see how the model classifies its language as real or fake.</div>
+def render_hero() -> None:
+    html(f"""
+    <div class="hero">
+      <div>
+        <div class="eyebrow">Powered by {MODEL_NAME}</div>
+        <div class="hero-title">Fake News Detection</div>
+        <div class="hero-sub">Analyze a news article using a pretrained text-classification model.</div>
+      </div>
+      <div class="hero-text">Paste the headline and article body below to see how
+      {MODEL_NAME} classifies the text.</div>
+    </div>
+    """)
+
+
+def render_info_strip() -> None:
+    html(f"""
+    <div class="strip">
+      <div><div class="k">Model</div><div class="v">{MODEL_NAME}</div></div>
+      <div><div class="k">Architecture</div><div class="v">BERT</div></div>
+      <div><div class="k">Accuracy</div><div class="v">61.95%</div></div>
+      <div><div class="k">Evaluation</div><div class="v">2,000 articles</div></div>
     </div>
     """)
 
@@ -212,9 +285,12 @@ def render_analyzer():
     """Draw the input panel. Returns (text, analyze_clicked)."""
     html('<div id="analyzer"></div>')
     try:
-        panel = st.container(border=True)
-    except TypeError:  # very old Streamlit without bordered containers
-        panel = st.container()
+        panel = st.container(border=True, key="analyzer-panel")
+    except TypeError:  # older Streamlit: plain bordered container, default look
+        try:
+            panel = st.container(border=True)
+        except TypeError:
+            panel = st.container()
     with panel:
         html("""
         <div class="panel-title">Analyze article</div>
@@ -223,12 +299,18 @@ def render_analyzer():
         text = st.text_area(
             "Article text",
             key="article_text",
-            height=260,
-            placeholder="Headline\n\nArticle text...",
+            height=250,
+            placeholder="Headline\n\nPaste the full article text here...",
             label_visibility="collapsed",
         )
-        html(f'<div class="counter">{len(text.split()):,} words · {len(text):,} characters</div>')
-        clicked = st.button("Analyze Article", type="primary")
+        try:
+            left, right = st.columns([3, 2], vertical_alignment="center")
+        except TypeError:  # older Streamlit without vertical_alignment
+            left, right = st.columns([3, 2])
+        with left:
+            html(f'<div class="counter">{len(text.split()):,} words · {len(text):,} characters</div>')
+        with right:
+            clicked = st.button("Analyze Article →", type="primary")
     return text, clicked
 
 
@@ -283,16 +365,21 @@ def render_result(res: dict) -> None:
                       'little to work with. Treat the result with extra care.</div>')
 
     html(f"""
-    <div class="result">
+    <div class="result {tone}">
       <div class="result-label">Prediction</div>
-      <div class="verdict {tone}">{verdict}</div>
-      <div class="conf">Confidence: {conf * 100:.1f}%</div>
+      <div class="verdict">{verdict}</div>
+      <div class="conf">{conf * 100:.1f}% confidence</div>
 
-      <div class="bar-row"><span>Real probability</span><b>{real_pct:.1f}%</b></div>
-      <div class="track"><div class="fill real" style="width:{real_pct:.1f}%"></div></div>
-
-      <div class="bar-row"><span>Fake probability</span><b>{fake_pct:.1f}%</b></div>
-      <div class="track"><div class="fill fake" style="width:{fake_pct:.1f}%"></div></div>
+      <div class="probs">
+        <div class="prob-row">
+          <span class="name">REAL</span><span class="pct">{real_pct:.1f}%</span>
+          <div class="track"><div class="fill real" style="width:{real_pct:.1f}%"></div></div>
+        </div>
+        <div class="prob-row">
+          <span class="name">FAKE</span><span class="pct">{fake_pct:.1f}%</span>
+          <div class="track"><div class="fill fake" style="width:{fake_pct:.1f}%"></div></div>
+        </div>
+      </div>
 
       <div class="meta">Words analyzed: {res["word_count"]:,}</div>
       {short_note}
@@ -309,7 +396,7 @@ def render_disclaimer() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 5. How it works and model information
+# 5. How it works and model section
 # ---------------------------------------------------------------------------
 def render_how_it_works() -> None:
     html(f"""
@@ -317,33 +404,38 @@ def render_how_it_works() -> None:
       <div class="section-title">How it works</div>
       <div class="steps">
         <div class="step"><div class="step-num">01</div><div class="step-name">Paste article</div>
-          <div class="step-text">Copy the headline and article text into the analyzer.</div></div>
-        <div class="step"><div class="step-num">02</div><div class="step-name">Run {MODEL_NAME}</div>
-          <div class="step-text">The model reads the text and scores it as real or fake.</div></div>
-        <div class="step"><div class="step-num">03</div><div class="step-name">Review prediction</div>
-          <div class="step-text">Check the label, the confidence and both probabilities.</div></div>
+          <div class="step-text">Add the headline and article body.</div></div>
+        <div class="step"><div class="step-num">02</div><div class="step-name">Analyze</div>
+          <div class="step-text">{MODEL_NAME} processes the text.</div></div>
+        <div class="step"><div class="step-num">03</div><div class="step-name">Review</div>
+          <div class="step-text">Examine the prediction and probabilities.</div></div>
       </div>
     </div>
     """)
 
 
 def render_model_info() -> None:
-    rows = [
-        ("Model", MODEL_NAME),
-        ("Architecture", "BERT-based text classification"),
-        ("Evaluation", "61.95% accuracy"),
-        ("Evaluation sample", "2,000 WELFake articles"),
-        ("Precision", "72.25%"),
-        ("Recall", "38.80%"),
-        ("F1 Score", "50.49%"),
-    ]
-    body = "".join(f'<div class="kv"><div class="k">{k}</div><div>{v}</div></div>' for k, v in rows)
+    rows = [("Accuracy", "61.95%"), ("Precision", "72.25%"), ("Recall", "38.80%"), ("F1 Score", "50.49%")]
+    table = "".join(f'<div class="kv"><span class="k">{k}</span><span class="v">{v}</span></div>' for k, v in rows)
     html(f"""
     <div class="section" id="about">
-      <div class="section-title">Model information</div>
-      {body}
-      <div class="model-note">These figures describe performance on the evaluation sample.
-      They do not guarantee that any single prediction is correct.</div>
+      <div class="section-title">About the model</div>
+      <div class="about">
+        <div class="about-text">
+          <div><b>{MODEL_NAME}</b> is a BERT-based text-classification model. TruthLens AI
+          uses the pretrained model <b>nallarahul/{MODEL_NAME}</b> as it is, without any
+          changes.</div>
+          <div>The model reads the wording of an article and returns a probability for
+          real and for fake. It picks up patterns in language, so it is a classifier and
+          not a fact-checker.</div>
+        </div>
+        <div>
+          {table}
+          <div class="eval-set"><span>Evaluation set:</span> 2,000 WELFake samples</div>
+          <div class="model-note">These figures come from our external evaluation sample and do
+          not guarantee the correctness of individual predictions.</div>
+        </div>
+      </div>
     </div>
     """)
 
@@ -355,7 +447,7 @@ def render_footer() -> None:
     html(f"""
     <div class="footer">
       <b>TruthLens AI</b><br>
-      Educational project · Powered by {MODEL_NAME}
+      Educational AI Project · Powered by {MODEL_NAME}
     </div>
     """)
 
@@ -366,7 +458,8 @@ def render_footer() -> None:
 def main() -> None:
     inject_css()
     render_header()
-    render_intro()
+    render_hero()
+    render_info_strip()
 
     text, clicked = render_analyzer()
 
