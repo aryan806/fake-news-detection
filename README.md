@@ -10,18 +10,23 @@ Classifies pasted news text as **real** or **fake** using **TF‑IDF + Random Fo
 
 **Try it:** [https://fake-news-detector-xcgxfcivdd3quciygjnpzy.streamlit.app/](https://fake-news-detector-xcgxfcivdd3quciygjnpzy.streamlit.app/) (Streamlit Community Cloud).
 
-## Quick start (local)
+git clone https://github.com/aryan806/fake-news-detection.git
+cd fake-news-detection
 
-```bash
-git clone https://github.com/mdraj-hunter/fake-news-detector.git
-cd fake-news-detector
 python -m venv .venv
-.\.venv\Scripts\activate          # Windows
-# source .venv/bin/activate       # macOS / Linux
+
+# Windows Command Prompt
+.venv\Scripts\activate
+
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+
+# macOS / Linux
+source .venv/bin/activate
+
 pip install -r requirements.txt
 python -c "import nltk; nltk.download('stopwords')"
 streamlit run app.py
-```
 
 Place **`fake_news_model.pkl`** and **`tfidf_vectorizer.pkl`** in the project root (or train your own with `fake_news_detector.ipynb`). Training CSVs are optional locally; they are gitignored by default because of size—see **Data** below.
 
